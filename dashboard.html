@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Finance Tracker - Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #f5f6fa;
+    --card: #ffffff;
+    --text: #1a1d29;
+    --text-muted: #6b7280;
+    --border: #e5e7eb;
+    --income: #10b981;
+    --expense: #f97316;
+    --balance: #6366f1;
+    --accent: #6366f1;
+    --accent-hover: #4f46e5;
+    --shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+  [data-theme="dark"] {
+    --bg: #12131a;
+    --card: #1c1e2a;
+    --text: #e8e9ee;
+    --text-muted: #9295a5;
+    --border: #2e3140;
+    --income: #34d399;
+    --expense: #fb923c;
+    --balance: #818cf8;
+    --accent: #818cf8;
+    --accent-hover: #6366f1;
+    --shadow: 0 2px 16px rgba(0,0,0,0.35);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 24px;
+    transition: background 0.2s, color 0.2s;
+  }
+  .topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+  }
+  .topbar h1 { font-size: 24px; }
+  .topbar .user-info { display: flex; align-items: center; gap: 12px; }
+  .topbar .username { font-weight: 600; color: var(--text-muted); }
+  .icon-btn, .logout-btn {
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  .icon-btn:hover, .logout-btn:hover { border-color: var(--accent); }
+
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+    box-shadow: var(--shadow);
+  }
+  .card .label { font-size: 13px; color: var(--text-muted); margin-bottom: 8px; }
+  .card .value { font-size: 28px; font-weight: 700; }
+  .card.income .value { color: var(--income); }
+  .card.expense .value { color: var(--expense); }
+  .card.balance .value { color: var(--balance); }
+
+  .charts {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .chart-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+    box-shadow: var(--shadow);
+  }
+  .chart-card h3 { font-size: 15px; margin-bottom: 14px; color: var(--text-muted); font-weight: 600; }
+  .chart-wrap { position: relative; height: 220px; }
+  .category-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px;
+}
+.mini-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.mini-card .mini-label { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
+.mini-card .mini-value { font-size: 17px; font-weight: 700; }
+
+  .bottom-row {
+    display: grid;
+    grid-template-columns: 1.3fr 1fr;
+    gap: 16px;
+  }
+  .panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+    box-shadow: var(--shadow);
+  }
+  .panel h3 { font-size: 15px; margin-bottom: 14px; color: var(--text-muted); font-weight: 600; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; color: var(--text-muted); font-weight: 600; padding: 8px 6px; border-bottom: 1px solid var(--border); }
+  td { padding: 10px 6px; border-bottom: 1px solid var(--border); }
+  .badge {
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .badge.income { background: rgba(16,185,129,0.15); color: var(--income); }
+  .badge.expense { background: rgba(249,115,22,0.15); color: var(--expense); }
+
+  form input, form select {
+    width: 100%;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    background: var(--bg);
+    color: var(--text);
+  }
+  form button {
+    width: 100%;
+    padding: 11px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  form button:hover { background: var(--accent-hover); }
+  .form-error { color: var(--expense); font-size: 13px; margin-top: 8px; display: none; }
+  .report-btn {
+    margin-top: 12px;
+    width: 100%;
+    padding: 10px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  .report-btn:hover { border-color: var(--accent); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>Finance Tracker</h1>
+  <div class="user-info">
+    <span class="username" id="username-display"></span>
+    <button class="icon-btn" onclick="toggleTheme()" id="theme-btn">🌙 Dark</button>
+    <button class="logout-btn" onclick="logout()">Log out</button>
+  </div>
+</div>
+
+<div class="cards">
+  <div class="card income">
+    <div class="label">Total income</div>
+    <div class="value" id="total-income">-</div>
+  </div>
+  <div class="card expense">
+    <div class="label">Total expense</div>
+    <div class="value" id="total-expense">-</div>
+  </div>
+  <div class="card balance">
+    <div class="label">Net balance</div>
+    <div class="value" id="net-balance">-</div>
+  </div>
+</div>
+<div class="panel" style="margin-bottom: 24px;">
+  <h3>Category breakdown</h3>
+  <div class="category-cards" id="category-cards"></div>
+</div>
+
+<div class="charts">
+  <div class="chart-card">
+    <h3>Income sources</h3>
+    <div class="chart-wrap"><canvas id="incomeChart"></canvas></div>
+  </div>
+  <div class="chart-card">
+    <h3>Spending by category</h3>
+    <div class="chart-wrap"><canvas id="expenseChart"></canvas></div>
+  </div>
+  <div class="chart-card" style="grid-column: 1 / -1;">
+    <h3>Spending this week</h3>
+    <div class="chart-wrap"><canvas id="weeklyChart"></canvas></div>
+  </div>
+</div>
+
+<div class="bottom-row">
+  <div class="panel">
+    <h3>Recent transactions</h3>
+    <table>
+      <thead>
+        <tr><th>Note</th><th>Category</th><th>Date</th><th style="text-align:right;">Amount</th></tr>
+      </thead>
+      <tbody id="transactions-body"></tbody>
+    </table>
+  </div>
+
+  <div class="panel">
+    <h3>Add transaction</h3>
+    <form onsubmit="event.preventDefault(); addTransaction();">
+      <input type="number" id="tx-amount" placeholder="Amount" step="0.01">
+      <input type="text" id="tx-note" placeholder="Note">
+      <input type="date" id="tx-date">
+      <select id="tx-category"></select>
+      <button type="submit">Add transaction</button>
+      <div class="form-error" id="tx-error"></div>
+    </form>
+    <button class="report-btn" onclick="downloadReport()">Download spending report (PNG)</button>
+    <div style="margin-top: 16px; border-top: 1px solid var(--border); padding-top: 16px;">
+  <h3 style="margin-bottom: 10px;">Add category</h3>
+  <input type="text" id="cat-name" placeholder="Category name">
+  <select id="cat-type">
+    <option value="expense">Expense</option>
+    <option value="income">Income</option>
+  </select>
+  <button onclick="addCategory()" style="background: var(--balance);">Add category</button>
+  <div class="form-error" id="cat-error"></div>
+  <div id="category-list" style="margin-top: 12px;"></div>
+</div>
+  </div>
+</div>
+
+<script>
+    function applyTheme(theme) {
+  document.documentElement.setAttribute("data-theme", theme);
+  document.getElementById("theme-btn").innerText = theme === "dark" ? "☀️ Light" : "🌙 Dark";
+  localStorage.setItem("theme", theme);
+}
+function toggleTheme() {
+  const current = document.documentElement.getAttribute("data-theme") || "light";
+  applyTheme(current === "dark" ? "light" : "dark");
+}
+applyTheme(localStorage.getItem("theme") || "light");
+const API_URL = "http://127.0.0.1:8000";
+const token = localStorage.getItem("access_token");
+
+if (!token) {
+  window.location.href = "login.html";
+}
+
+function authHeaders() {
+  return { "Authorization": "Bearer " + token };
+}
+
+function logout() {
+  localStorage.removeItem("access_token");
+  window.location.href = "login.html";
+}
+
+function formatMoney(n) {
+  return "₹" + Number(n).toLocaleString("en-IN", { maximumFractionDigits: 0 });
+}
+
+let categories = [];
+let incomeChartInstance = null;
+let expenseChartInstance = null;
+
+async function loadCategories() {
+  const catRes = await fetch(`${API_URL}/categories`, { headers: authHeaders() });
+  categories = await catRes.json();
+
+  const select = document.getElementById("tx-category");
+  select.innerHTML = "";
+  if (categories.length === 0) {
+    select.innerHTML = '<option value="">No categories yet</option>';
+  } else {
+    categories.forEach(c => {
+      const opt = document.createElement("option");
+      opt.value = c.id;
+      opt.innerText = `${c.name} (${c.type})`;
+      select.appendChild(opt);
+    });
+  }
+
+   const txRes = await fetch(`${API_URL}/transactions`, { headers: authHeaders() });
+  renderCategoryList();
+  return await txRes.json();
+}
+async function loadSummary() {
+  const res = await fetch(`${API_URL}/summary`, { headers: authHeaders() });
+  const data = await res.json();
+  document.getElementById("total-income").innerText = formatMoney(data.total_income);
+  document.getElementById("total-expense").innerText = formatMoney(data.total_expense);
+  document.getElementById("net-balance").innerText = formatMoney(data.net_balance);
+}
+
+function renderTransactionsTable(transactions) {
+  const tbody = document.getElementById("transactions-body");
+  tbody.innerHTML = "";
+  const sorted = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
+  sorted.forEach(t => {
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td>${t.note || "-"}</td>
+      <td><span class="badge ${t.category.type}">${t.category.name}</span></td>
+      <td>${t.date}</td>
+      <td style="text-align:right;">${formatMoney(t.amount)}</td>
+    `;
+    tbody.appendChild(row);
+  });
+}
+
+function renderCharts(transactions) {
+  const incomeTotals = {};
+  const expenseTotals = {};
+  transactions.forEach(t => {
+    const target = t.category.type === "income" ? incomeTotals : expenseTotals;
+    target[t.category.name] = (target[t.category.name] || 0) + Number(t.amount);
+  });
+
+  const palette = ["#667eea", "#1D9E75", "#D85A30", "#378ADD", "#D4537E", "#BA7517"];
+
+  if (incomeChartInstance) incomeChartInstance.destroy();
+  incomeChartInstance = new Chart(document.getElementById("incomeChart"), {
+    type: "doughnut",
+    data: {
+      labels: Object.keys(incomeTotals),
+      datasets: [{ data: Object.values(incomeTotals), backgroundColor: palette }]
+    },
+    options: { plugins: { legend: { position: "bottom", labels: { boxWidth: 12, font: { size: 11 } } } } }
+  });
+
+  if (expenseChartInstance) expenseChartInstance.destroy();
+  expenseChartInstance = new Chart(document.getElementById("expenseChart"), {
+    type: "bar",
+    data: {
+      labels: Object.keys(expenseTotals),
+      datasets: [{ data: Object.values(expenseTotals), backgroundColor: "#D85A30", borderRadius: 6 }]
+    },
+    options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+  });
+}
+function renderCategoryCards(transactions) {
+  const totals = {};
+  transactions.forEach(t => {
+    const key = t.category.name;
+    if (!totals[key]) totals[key] = { amount: 0, type: t.category.type };
+    totals[key].amount += Number(t.amount);
+  });
+
+  const container = document.getElementById("category-cards");
+  container.innerHTML = "";
+  Object.entries(totals).forEach(([name, data]) => {
+    const card = document.createElement("div");
+    card.className = "mini-card";
+    const color = data.type === "income" ? "var(--income)" : "var(--expense)";
+    card.innerHTML = `
+      <div class="mini-label">${name}</div>
+      <div class="mini-value" style="color:${color}">${formatMoney(data.amount)}</div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+let weeklyChartInstance = null;
+function renderWeeklyChart(transactions) {
+  const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const weeklyTotals = new Array(7).fill(0);
+
+  transactions.filter(t => t.category.type === "expense").forEach(t => {
+    const dayIndex = new Date(t.date).getDay();
+    weeklyTotals[dayIndex] += Number(t.amount);
+  });
+
+  if (weeklyChartInstance) weeklyChartInstance.destroy();
+  weeklyChartInstance = new Chart(document.getElementById("weeklyChart"), {
+    type: "bar",
+    data: {
+      labels: days,
+      datasets: [{ data: weeklyTotals, backgroundColor: "#6366f1", borderRadius: 6 }]
+    },
+    options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+  });
+}
+
+async function addTransaction() {
+  const amount = document.getElementById("tx-amount").value;
+  const note = document.getElementById("tx-note").value;
+  const date = document.getElementById("tx-date").value;
+  const category_id = document.getElementById("tx-category").value;
+  const errorEl = document.getElementById("tx-error");
+  errorEl.style.display = "none";
+
+  if (!amount || !date || !category_id) {
+    errorEl.innerText = "Please fill in amount, date, and category.";
+    errorEl.style.display = "block";
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_URL}/transactions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify({ amount: Number(amount), note, date, category_id: Number(category_id) })
+    });
+    if (!res.ok) throw new Error("Could not add transaction");
+    document.getElementById("tx-amount").value = "";
+    document.getElementById("tx-note").value = "";
+    document.getElementById("tx-date").value = "";
+    await refreshAll();
+  } catch (err) {
+    errorEl.innerText = err.message;
+    errorEl.style.display = "block";
+  }
+}
+async function addCategory() {
+  const name = document.getElementById("cat-name").value.trim();
+  const type = document.getElementById("cat-type").value;
+  const errorEl = document.getElementById("cat-error");
+  errorEl.style.display = "none";
+
+  if (!name) {
+    errorEl.innerText = "Please enter a category name.";
+    errorEl.style.display = "block";
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_URL}/categories`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify({ name, type })
+    });
+    if (!res.ok) throw new Error("Could not add category");
+    document.getElementById("cat-name").value = "";
+    await refreshAll();
+  } catch (err) {
+    errorEl.innerText = err.message;
+    errorEl.style.display = "block";
+  }
+}
+
+function renderCategoryList() {
+  const container = document.getElementById("category-list");
+  container.innerHTML = "";
+  categories.forEach(c => {
+    const row = document.createElement("div");
+    row.style.cssText = "display:flex; justify-content:space-between; align-items:center; padding:6px 0; font-size:13px; border-bottom:1px solid var(--border);";
+    row.innerHTML = `
+      <span>${c.name} <span style="color:var(--text-muted)">(${c.type})</span></span>
+      <button onclick="deleteCategory(${c.id})" style="width:auto; padding:4px 10px; background:transparent; border:1px solid var(--border); color:var(--expense);">Delete</button>
+    `;
+    container.appendChild(row);
+  });
+}
+
+async function deleteCategory(id) {
+  try {
+    const res = await fetch(`${API_URL}/categories/${id}`, {
+      method: "DELETE",
+      headers: authHeaders()
+    });
+    if (!res.ok) {
+      alert("Could not delete — this category may still have transactions linked to it.");
+      return;
+    }
+    await refreshAll();
+  } catch (err) {
+    alert("Could not delete category.");
+  }
+}
+
+async function downloadReport() {
+  const res = await fetch(`${API_URL}/analytics/spending-chart`, { headers: authHeaders() });
+  if (!res.ok) {
+    alert("No expense data available to generate a report yet.");
+    return;
+  }
+  const blob = await res.blob();
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "spending-report.png";
+  a.click();
+}
+
+async function refreshAll() {
+  const transactions = await loadCategories();
+  await loadSummary();
+  renderTransactionsTable(transactions);
+  renderCharts(transactions);
+  renderCategoryCards(transactions);
+  renderWeeklyChart(transactions);
+}
+
+refreshAll();
+</script>
+
+</body>
+</html>

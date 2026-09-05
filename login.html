@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Finance Tracker - Login</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', sans-serif;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .card {
+    background: white;
+    padding: 40px;
+    border-radius: 16px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    width: 340px;
+  }
+  h1 { font-size: 22px; margin-bottom: 6px; color: #2d2d2d; }
+  p.subtitle { color: #888; font-size: 14px; margin-bottom: 24px; }
+  input {
+    width: 100%;
+    padding: 12px 14px;
+    margin-bottom: 14px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+  }
+  input:focus { outline: none; border-color: #667eea; }
+  button {
+    width: 100%;
+    padding: 12px;
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 6px;
+  }
+  button:hover { background: #5566d6; }
+  .error {
+    color: #e24b4a;
+    font-size: 13px;
+    margin-top: 10px;
+    text-align: center;
+    display: none;
+  }
+  .toggle {
+    text-align: center;
+    margin-top: 18px;
+    font-size: 13px;
+    color: #666;
+  }
+  .toggle span {
+    color: #667eea;
+    cursor: pointer;
+    font-weight: 600;
+  }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <h1 id="form-title">Welcome back</h1>
+  <p class="subtitle" id="form-subtitle">Log in to your finance tracker</p>
+
+  <input type="text" id="username" placeholder="Username">
+  <input type="password" id="password" placeholder="Password">
+  <input type="email" id="email" placeholder="Email" style="display:none;">
+
+  <button onclick="submitForm()" id="submit-btn">Log in</button>
+  <div class="error" id="error-msg"></div>
+
+  <div class="toggle">
+    <span id="toggle-text" onclick="toggleMode()">Don't have an account? Sign up</span>
+  </div>
+</div>
+
+<script>
+const API_URL = "http://127.0.0.1:8000";
+let isSignup = false;
+
+function toggleMode() {
+  isSignup = !isSignup;
+  document.getElementById("form-title").innerText = isSignup ? "Create account" : "Welcome back";
+  document.getElementById("form-subtitle").innerText = isSignup ? "Sign up to start tracking" : "Log in to your finance tracker";
+  document.getElementById("email").style.display = isSignup ? "block" : "none";
+  document.getElementById("submit-btn").innerText = isSignup ? "Sign up" : "Log in";
+  document.getElementById("toggle-text").innerText = isSignup ? "Already have an account? Log in" : "Don't have an account? Sign up";
+  document.getElementById("error-msg").style.display = "none";
+}
+
+async function submitForm() {
+  const username = document.getElementById("username").value.trim();
+  const password = document.getElementById("password").value;
+  const errorMsg = document.getElementById("error-msg");
+  errorMsg.style.display = "none";
+
+  if (!username || !password) {
+    errorMsg.innerText = "Please fill in all fields.";
+    errorMsg.style.display = "block";
+    return;
+  }
+
+  if (isSignup) {
+    const email = document.getElementById("email").value.trim();
+    if (!email) {
+      errorMsg.innerText = "Please enter an email.";
+      errorMsg.style.display = "block";
+      return;
+    }
+    try {
+      const res = await fetch(`${API_URL}/signup`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, email, password })
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.detail || "Signup failed");
+      }
+      toggleMode();
+      errorMsg.style.color = "#1D9E75";
+      errorMsg.innerText = "Account created! Please log in.";
+      errorMsg.style.display = "block";
+    } catch (err) {
+      errorMsg.style.color = "#e24b4a";
+      errorMsg.innerText = err.message;
+      errorMsg.style.display = "block";
+    }
+  } else {
+    try {
+      const formBody = new URLSearchParams();
+      formBody.append("username", username);
+      formBody.append("password", password);
+
+      const res = await fetch(`${API_URL}/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: formBody
+      });
+      if (!res.ok) {
+        throw new Error("Incorrect username or password");
+      }
+      const data = await res.json();
+      localStorage.setItem("access_token", data.access_token);
+      window.location.href = "dashboard.html";
+    } catch (err) {
+      errorMsg.innerText = err.message;
+      errorMsg.style.display = "block";
+    }
+  }
+}
+</script>
+
+</body>
+</html>
