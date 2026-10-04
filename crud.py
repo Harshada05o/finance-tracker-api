@@ -84,3 +84,29 @@ def delete_category(db: Session, category_id: int, user_id: int):
         db.commit()
         return True
     return False
+
+def update_transaction(db: Session, transaction_id: int, transaction: schemas.TransactionCreate, user_id: int):
+    db_transaction = db.query(models.Transaction).filter(
+        models.Transaction.id == transaction_id,
+        models.Transaction.user_id == user_id
+    ).first()
+    if not db_transaction:
+        return None
+    db_transaction.amount = transaction.amount
+    db_transaction.note = transaction.note
+    db_transaction.date = transaction.date
+    db_transaction.category_id = transaction.category_id
+    db.commit()
+    db.refresh(db_transaction)
+    return db_transaction
+
+def delete_transaction(db: Session, transaction_id: int, user_id: int):
+    transaction = db.query(models.Transaction).filter(
+        models.Transaction.id == transaction_id,
+        models.Transaction.user_id == user_id
+    ).first()
+    if transaction:
+        db.delete(transaction)
+        db.commit()
+        return True
+    return False
